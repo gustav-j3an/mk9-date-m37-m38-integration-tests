@@ -6,11 +6,12 @@ const workflow = readFileSync(new URL('../.github/workflows/m37-m38-rc1-9-postgr
 const runner = readFileSync(new URL('./rc1-9-run-postgres17.sh', import.meta.url), 'utf8');
 const appSha = 'd4f27d713f2200857ffdac1d57ca8bc50d7094fa';
 
-test('RC1.14 workflow is manual-only, read-only on GitHub, and restricted to the isolated test branch', () => {
+test('RC1.14 workflow runs only manually or on the isolated test branch', () => {
   assert.match(workflow, /\bon:\s*\n\s+workflow_dispatch:\s*(?:\n|$)/);
-  assert.doesNotMatch(workflow, /^\s+(?:push|pull_request|schedule):/m);
+  assert.match(workflow, /push:\s*\n\s+branches:\s*\n\s+- codex\/rc1-14-original-migrations/);
+  assert.doesNotMatch(workflow, /^\s+(?:pull_request|schedule):/m);
   assert.match(workflow, /permissions:\s*\n\s+contents:\s+read/);
-  assert.match(workflow, /if:\s*github\.event_name == 'workflow_dispatch' && github\.ref == 'refs\/heads\/codex\/rc1-14-original-migrations'/);
+  assert.match(workflow, /if:\s*github\.ref == 'refs\/heads\/codex\/rc1-14-original-migrations'/);
   assert.match(workflow, /runs-on:\s*ubuntu-latest/);
   assert.match(workflow, /node-version:\s*22\.16\.0/);
   assert.match(workflow, /persist-credentials:\s*false/);

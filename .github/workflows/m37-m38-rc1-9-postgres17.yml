@@ -2,6 +2,9 @@ name: MK9 DATE RC1.14 M37/M38 integration (PostgreSQL 17)
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - codex/rc1-14-original-migrations
 
 permissions:
   contents: read
@@ -12,7 +15,7 @@ concurrency:
 
 jobs:
   integration:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/rc1-14-original-migrations'
+    if: github.ref == 'refs/heads/codex/rc1-14-original-migrations'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:

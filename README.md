@@ -1,6 +1,6 @@
-# MK9 DATE RC1.14 ? M37/M38 PostgreSQL 17 integration harness
+# MK9 DATE RC1.14 - M37/M38 PostgreSQL 17 integration harness
 
-This public repository exists only to run the PostgreSQL 17 integration suite in an isolated GitHub Actions runner. The workflow is manual-only and accepts only `codex/rc1-14-original-migrations`. It is not connected to Vercel, contains no secrets, and has no deployment or remote database steps.
+This public repository exists only to run the PostgreSQL 17 integration suite in an isolated GitHub Actions runner. The workflow can be dispatched manually and also runs on pushes to `codex/rc1-14-original-migrations` only. It is not connected to Vercel, contains no secrets, and has no deployment or remote database steps.
 
 It checks out `gustav-j3an/mk9-data` at the immutable RC1.14 commit `d4f27d713f2200857ffdac1d57ca8bc50d7094fa`. It copies the application's migration files byte-for-byte and rejects any filename without a unique 14-digit version. It does not rename migrations, reorder SQL, or substitute migration contents. The step summary records each source migration SHA-256 and the exact sorted execution order. Supabase CLI 3.0.0 runs a local disposable stack on PostgreSQL 17; migrations and synthetic fixtures execute only there, and cleanup always stops and removes the stack.
 
