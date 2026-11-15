@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly EXPECTED_APP_SHA='a5419b60229e0c9fcd28f47c32b576f1713129c1'
+readonly EXPECTED_APP_SHA='d4f27d713f2200857ffdac1d57ca8bc50d7094fa'
 readonly APP_DIR="${APP_DIR:-${GITHUB_WORKSPACE:-}/app-under-test}"
 readonly STACK_DIR="${SUPABASE_TEST_WORKDIR:?SUPABASE_TEST_WORKDIR is required}"
 readonly EXPECTED_STACK_DIR="${RUNNER_TEMP:?RUNNER_TEMP is required}/mk9-date-rc1-14-postgres17"

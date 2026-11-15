@@ -4,7 +4,7 @@ import { test } from 'node:test';
 
 const workflow = readFileSync(new URL('../.github/workflows/m37-m38-rc1-9-postgres17.yml', import.meta.url), 'utf8');
 const runner = readFileSync(new URL('./rc1-9-run-postgres17.sh', import.meta.url), 'utf8');
-const appSha = 'a5419b60229e0c9fcd28f47c32b576f1713129c1';
+const appSha = 'd4f27d713f2200857ffdac1d57ca8bc50d7094fa';
 
 test('RC1.14 workflow is manual-only, read-only on GitHub, and restricted to the isolated test branch', () => {
   assert.match(workflow, /\bon:\s*\n\s+workflow_dispatch:\s*(?:\n|$)/);

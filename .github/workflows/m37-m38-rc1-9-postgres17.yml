@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: gustav-j3an/mk9-data
-          ref: a5419b60229e0c9fcd28f47c32b576f1713129c1
+          ref: d4f27d713f2200857ffdac1d57ca8bc50d7094fa
           path: app-under-test
           persist-credentials: false
 
@@ -33,7 +33,7 @@ jobs:
         shell: bash
         env:
           APP_DIR: ${{ github.workspace }}/app-under-test
-          APP_SHA: a5419b60229e0c9fcd28f47c32b576f1713129c1
+          APP_SHA: d4f27d713f2200857ffdac1d57ca8bc50d7094fa
         run: |
           set -euo pipefail
           test "$(git -C "$APP_DIR" rev-parse HEAD)" = "$APP_SHA"
@@ -80,7 +80,7 @@ jobs:
         shell: bash
         env:
           APP_DIR: ${{ github.workspace }}/app-under-test
-          APP_SHA: a5419b60229e0c9fcd28f47c32b576f1713129c1
+          APP_SHA: d4f27d713f2200857ffdac1d57ca8bc50d7094fa
           SUPABASE_TEST_WORKDIR: ${{ runner.temp }}/mk9-date-rc1-14-postgres17
         run: bash scripts/rc1-9-run-postgres17.sh
 
