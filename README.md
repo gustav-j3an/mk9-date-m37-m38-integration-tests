@@ -1,9 +1,7 @@
-﻿# MK9 DATE RC1.9 — M37/M38 integration harness
+# MK9 DATE RC1.14 ? M37/M38 PostgreSQL 17 integration harness
 
-This public repository exists only to run the disposable PostgreSQL 17 integration suite for the published application commit `f8df53b1ffd77ea255fda1c7a663946a0b25607c`.
+This public repository exists only to run the PostgreSQL 17 integration suite in an isolated GitHub Actions runner. The workflow is manual-only and accepts only `codex/rc1-14-original-migrations`. It is not connected to Vercel, contains no secrets, and has no deployment or remote database steps.
 
-The manual GitHub Actions workflow checks out the application from `gustav-j3an/mk9-data` at that immutable commit, validates the source, starts a local Supabase/PostgreSQL stack on the Actions runner, runs the M37/M38 tests, and removes the stack. It has no deployment steps, secrets, project linking, or remote database calls.
+It checks out `gustav-j3an/mk9-data` at the immutable RC1.14 commit `a5419b60229e0c9fcd28f47c32b576f1713129c1`. It copies the application's migration files byte-for-byte and rejects any filename without a unique 14-digit version. It does not rename migrations, reorder SQL, or substitute migration contents. The step summary records each source migration SHA-256 and the exact sorted execution order. Supabase CLI 3.0.0 runs a local disposable stack on PostgreSQL 17; migrations and synthetic fixtures execute only there, and cleanup always stops and removes the stack.
 
-The pinned application snapshot contains legacy migration files with duplicate date-only versions and one same-version dependency conflict (`profiles` is created after a migration that alters it). For this disposable test copy only, the harness assigns unique 14-digit versions and orders the `2026-09-30` files by dependency; SQL contents and the application checkout remain unchanged. The workflow records source migration hashes and every filename mapping. This normalization lets functional M37/M38 scenarios run but does not certify that the original migration ledger can be reset unchanged.
-
-Run `MK9 DATE RC1.9 M37/M38 integration (PostgreSQL 17)` manually on `main`. Standard GitHub-hosted runners are free for public repositories. This repository is not connected to Vercel.
+The migration ledger reconciliation aligned 43 M15 file versions with the homologation ledger and restored four captured M18 migrations that were already present in the homologation history. `20261030160000_minimal_visit_regularization.sql` remains an extra local migration not listed in the observed remote ledger; it is tested only on the disposable stack and is not pushed remotely. See `docs/database/RC1_14_MIGRATION_LEDGER.md` in the application branch for the comparison and limits.

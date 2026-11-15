@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly EXPECTED_APP_SHA='f8df53b1ffd77ea255fda1c7a663946a0b25607c'
+readonly EXPECTED_APP_SHA='a5419b60229e0c9fcd28f47c32b576f1713129c1'
 readonly APP_DIR="${APP_DIR:-${GITHUB_WORKSPACE:-}/app-under-test}"
 readonly STACK_DIR="${SUPABASE_TEST_WORKDIR:?SUPABASE_TEST_WORKDIR is required}"
-readonly EXPECTED_STACK_DIR="${RUNNER_TEMP:?RUNNER_TEMP is required}/mk9-date-rc1-9-postgres17"
+readonly EXPECTED_STACK_DIR="${RUNNER_TEMP:?RUNNER_TEMP is required}/mk9-date-rc1-14-postgres17"
 
 fail() { printf 'ERROR: %s\n' "$1" >&2; exit 1; }
 
-[[ "${APP_SHA:-}" == "$EXPECTED_APP_SHA" ]] || fail 'APP_SHA does not match the published RC1 commit.'
-[[ "$(git -C "$APP_DIR" rev-parse HEAD)" == "$EXPECTED_APP_SHA" ]] || fail 'Application checkout is not the published RC1 commit.'
+[[ "${APP_SHA:-}" == "$EXPECTED_APP_SHA" ]] || fail 'APP_SHA does not match the approved RC1.14 application commit.'
+[[ "$(git -C "$APP_DIR" rev-parse HEAD)" == "$EXPECTED_APP_SHA" ]] || fail 'Application checkout is not the approved RC1.14 application commit.'
 [[ "$STACK_DIR" == "$EXPECTED_STACK_DIR" ]] || fail 'Refusing to use a non-designated disposable work directory.'
 
 for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY SUPABASE_DB_URL SUPABASE_ANON_KEY SUPABASE_TEST_ANON_KEY SUPABASE_TEST_SERVICE_KEY ANON_KEY SERVICE_ROLE_KEY DATABASE_URL DB_URL POSTGRES_URL API_URL POSTGRES_PASSWORD PGHOST PGHOSTADDR PGPORT PGUSER PGPASSWORD PGDATABASE PGSERVICE PGSERVICEFILE PGPASSFILE; do
@@ -25,11 +25,25 @@ mkdir -p "$STACK_DIR/supabase"
 cp "$APP_DIR/supabase/config.toml" "$STACK_DIR/supabase/config.toml"
 cp -R "$APP_DIR/supabase/migrations" "$STACK_DIR/supabase/migrations"
 
-# The published checkout has date-only legacy migration versions, including four
-# files on 2026-09-30. Normalize only their disposable copies to unique versions;
-# keep SQL bodies unchanged and record every mapping for transparent test results.
-python3 "$GITHUB_WORKSPACE/scripts/rc1-9-normalize-legacy-migrations.py" \
-  "$STACK_DIR/supabase/migrations" > "$STACK_DIR/migration-order-normalization.txt"
+# Use the application's original migration files and names unchanged.
+# Reject malformed or duplicate version prefixes before starting the local stack.
+python3 - "$STACK_DIR/supabase/migrations" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+directory = Path(sys.argv[1])
+files = sorted(directory.glob("*.sql"))
+versions = []
+for path in files:
+    match = re.fullmatch(r"(\d{14})_.+\.sql", path.name)
+    if match is None:
+        raise SystemExit(f"Invalid application migration filename: {path.name}")
+    versions.append(match.group(1))
+if len(versions) != len(set(versions)):
+    raise SystemExit("Application migration versions are not unique")
+print(f"Validated {len(files)} original migrations with unique 14-digit versions.")
+PY
 
 # The source repository deliberately disables db reset and seeds. Enable migrations
 # only in this disposable copy; never mutate app-under-test or a linked project.
@@ -46,7 +60,7 @@ for index, line in enumerate(lines):
         section = line[1:-1]
         continue
     if section is None and line.strip().startswith("project_id ="):
-        lines[index] = 'project_id = "mk9-date-rc1-9-postgres17-disposable"'
+        lines[index] = 'project_id = "mk9-date-rc1-14-postgres17-disposable"'
         updated["project_id"] = True
     elif section == "db" and line.strip().startswith("major_version ="):
         lines[index] = "major_version = 17"
@@ -63,28 +77,28 @@ path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 PY
 
 # This harness-only migration enables pg_cron before the unchanged RC1 M38 files.
-cat > "$STACK_DIR/supabase/migrations/20260929000000_rc1_9_test_enable_pg_cron.sql" <<'SQL'
+cat > "$STACK_DIR/supabase/migrations/20260929000000_rc1_14_test_enable_pg_cron.sql" <<'SQL'
 CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA pg_catalog;
 SQL
 
-test "$(grep -c '^project_id = "mk9-date-rc1-9-postgres17-disposable"$' "$STACK_DIR/supabase/config.toml")" -eq 1
+test "$(grep -c '^project_id = "mk9-date-rc1-14-postgres17-disposable"$' "$STACK_DIR/supabase/config.toml")" -eq 1
 
 mapfile -t migration_files < <(find "$APP_DIR/supabase/migrations" -maxdepth 1 -type f -name '*.sql' -print | sort)
 test "${#migration_files[@]}" -gt 0 || fail 'No application migrations found.'
 sha256sum "${migration_files[@]}" > "$STACK_DIR/application-migrations.sha256"
-sha256sum "$STACK_DIR/supabase/migrations/20260929000000_rc1_9_test_enable_pg_cron.sql" > "$STACK_DIR/harness-bootstrap.sha256"
+sha256sum "$STACK_DIR/supabase/migrations/20260929000000_rc1_14_test_enable_pg_cron.sql" > "$STACK_DIR/harness-bootstrap.sha256"
 {
-  echo '### RC1.9 isolated migration identity'
+  echo '### RC1.14 isolated migration identity'
   echo "- Application SHA: \`$EXPECTED_APP_SHA\`"
   echo "- Harness SHA: \`${GITHUB_SHA:-local-uncommitted}\`"
   echo "- Supabase CLI: \`$(supabase --version)\`"
   echo "- Application migration count: ${#migration_files[@]}"
-  echo '- Application migration SHA-256 entries:'
-  sed 's#^.*/##' "$STACK_DIR/application-migrations.sha256" | sed 's/^/  - /'
+  echo '- Original application migration SHA-256 entries:'
+  awk '{name=$2; sub(".*/", "", name); printf "  - %s  %s\n", $1, name}' "$STACK_DIR/application-migrations.sha256"
+  echo '- Original migration execution order:'
+  find "$STACK_DIR/supabase/migrations" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort | sed 's/^/  - /'
   echo '- Harness bootstrap SHA-256:'
-  cat "$STACK_DIR/harness-bootstrap.sha256" | sed 's/^/  - /'
-  echo '- Test-only legacy migration version normalization:'
-  sed 's/^/  - /' "$STACK_DIR/migration-order-normalization.txt"
+  awk '{name=$2; sub(".*/", "", name); printf "  - %s  %s\n", $1, name}' "$STACK_DIR/harness-bootstrap.sha256"
 } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
 
 cd "$STACK_DIR"

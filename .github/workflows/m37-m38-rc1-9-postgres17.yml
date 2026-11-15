@@ -1,4 +1,4 @@
-name: MK9 DATE RC1.9 M37/M38 integration (PostgreSQL 17)
+name: MK9 DATE RC1.14 M37/M38 integration (PostgreSQL 17)
 
 on:
   workflow_dispatch:
@@ -7,12 +7,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: mk9-date-rc1-9-m37-m38-postgres17
+  group: mk9-date-rc1-14-m37-m38-postgres17
   cancel-in-progress: false
 
 jobs:
   integration:
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/rc1-14-original-migrations'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: gustav-j3an/mk9-data
-          ref: f8df53b1ffd77ea255fda1c7a663946a0b25607c
+          ref: a5419b60229e0c9fcd28f47c32b576f1713129c1
           path: app-under-test
           persist-credentials: false
 
@@ -33,7 +33,7 @@ jobs:
         shell: bash
         env:
           APP_DIR: ${{ github.workspace }}/app-under-test
-          APP_SHA: f8df53b1ffd77ea255fda1c7a663946a0b25607c
+          APP_SHA: a5419b60229e0c9fcd28f47c32b576f1713129c1
         run: |
           set -euo pipefail
           test "$(git -C "$APP_DIR" rev-parse HEAD)" = "$APP_SHA"
@@ -57,7 +57,6 @@ jobs:
       - name: Run harness safety checks
         run: |
           node --test scripts/rc1-9-postgres17-workflow.test.mjs
-          python3 scripts/rc1-9-normalize-legacy-migrations.test.py
 
       - name: Install application dependencies and run local checks
         working-directory: app-under-test
@@ -81,15 +80,15 @@ jobs:
         shell: bash
         env:
           APP_DIR: ${{ github.workspace }}/app-under-test
-          APP_SHA: f8df53b1ffd77ea255fda1c7a663946a0b25607c
-          SUPABASE_TEST_WORKDIR: ${{ runner.temp }}/mk9-date-rc1-9-postgres17
+          APP_SHA: a5419b60229e0c9fcd28f47c32b576f1713129c1
+          SUPABASE_TEST_WORKDIR: ${{ runner.temp }}/mk9-date-rc1-14-postgres17
         run: bash scripts/rc1-9-run-postgres17.sh
 
       - name: Stop disposable stack and remove temporary database files
         if: always()
         shell: bash
         env:
-          SUPABASE_TEST_WORKDIR: ${{ runner.temp }}/mk9-date-rc1-9-postgres17
+          SUPABASE_TEST_WORKDIR: ${{ runner.temp }}/mk9-date-rc1-14-postgres17
         run: |
           set +e
           if [ -f "$SUPABASE_TEST_WORKDIR/supabase/config.toml" ]; then
