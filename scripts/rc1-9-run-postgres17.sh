@@ -4,7 +4,7 @@ set -Eeuo pipefail
 readonly EXPECTED_APP_SHA='d4f27d713f2200857ffdac1d57ca8bc50d7094fa'
 readonly APP_DIR="${APP_DIR:-${GITHUB_WORKSPACE:-}/app-under-test}"
 readonly STACK_DIR="${SUPABASE_TEST_WORKDIR:?SUPABASE_TEST_WORKDIR is required}"
-readonly EXPECTED_STACK_DIR="${RUNNER_TEMP:?RUNNER_TEMP is required}/mk9-date-rc1-14-postgres17"
+readonly EXPECTED_STACK_DIR="${RUNNER_TEMP:?RUNNER_TEMP is required}/mk9-date-rc1-15-postgres17"
 
 fail() { printf 'ERROR: %s\n' "$1" >&2; exit 1; }
 
@@ -60,7 +60,7 @@ for index, line in enumerate(lines):
         section = line[1:-1]
         continue
     if section is None and line.strip().startswith("project_id ="):
-        lines[index] = 'project_id = "mk9-date-rc1-14-postgres17-disposable"'
+        lines[index] = 'project_id = "mk9-date-rc1-15-postgres17-disposable"'
         updated["project_id"] = True
     elif section == "db" and line.strip().startswith("major_version ="):
         lines[index] = "major_version = 17"
@@ -81,14 +81,14 @@ cat > "$STACK_DIR/supabase/migrations/20260929000000_rc1_14_test_enable_pg_cron.
 CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA pg_catalog;
 SQL
 
-test "$(grep -c '^project_id = "mk9-date-rc1-14-postgres17-disposable"$' "$STACK_DIR/supabase/config.toml")" -eq 1
+test "$(grep -c '^project_id = "mk9-date-rc1-15-postgres17-disposable"$' "$STACK_DIR/supabase/config.toml")" -eq 1
 
 mapfile -t migration_files < <(find "$APP_DIR/supabase/migrations" -maxdepth 1 -type f -name '*.sql' -print | sort)
 test "${#migration_files[@]}" -gt 0 || fail 'No application migrations found.'
 sha256sum "${migration_files[@]}" > "$STACK_DIR/application-migrations.sha256"
 sha256sum "$STACK_DIR/supabase/migrations/20260929000000_rc1_14_test_enable_pg_cron.sql" > "$STACK_DIR/harness-bootstrap.sha256"
 {
-  echo '### RC1.14 isolated migration identity'
+  echo '### RC1.15 migration reconciliation identity'
   echo "- Application SHA: \`$EXPECTED_APP_SHA\`"
   echo "- Harness SHA: \`${GITHUB_SHA:-local-uncommitted}\`"
   echo "- Supabase CLI: \`$(supabase --version)\`"
@@ -132,6 +132,17 @@ psql -X -v ON_ERROR_STOP=1 -Atqc "SELECT current_setting('server_version_num')::
 echo "Disposable PostgreSQL version: $(psql -X -Atqc 'SHOW server_version')"
 
 supabase db reset --local --no-seed
+
+echo 'Checking idempotent replay against the already-created M15 regularization schema.'
+readonly regularization_migration="$APP_DIR/supabase/migrations/20261030160000_minimal_visit_regularization.sql"
+readonly inventory_sql="$GITHUB_WORKSPACE/scripts/rc1-15-regularization-inventory.sql"
+[[ -f "$regularization_migration" ]] || fail 'The pinned application does not contain the regularization migration.'
+[[ -f "$inventory_sql" ]] || fail 'The regularization schema inventory query is missing.'
+before_inventory="$(psql -X -v ON_ERROR_STOP=1 -Atq -f "$inventory_sql")"
+psql -X -v ON_ERROR_STOP=1 -f "$regularization_migration" >/dev/null
+after_inventory="$(psql -X -v ON_ERROR_STOP=1 -Atq -f "$inventory_sql")"
+[[ "$before_inventory" == "$after_inventory" ]] || fail 'Replaying the regularization migration changed the existing schema inventory or row counts.'
+echo 'PASS: the original regularization migration replayed without changing schema metadata or data counts.'
 
 echo 'Running M37 database/API integration suite.'
 cd "$GITHUB_WORKSPACE"
