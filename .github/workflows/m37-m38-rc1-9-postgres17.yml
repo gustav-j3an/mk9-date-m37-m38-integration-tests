@@ -55,7 +55,9 @@ jobs:
           cache-dependency-path: app-under-test/package-lock.json
 
       - name: Run harness safety checks
-        run: node --test scripts/rc1-9-postgres17-workflow.test.mjs
+        run: |
+          node --test scripts/rc1-9-postgres17-workflow.test.mjs
+          python3 scripts/rc1-9-normalize-legacy-migrations.test.py
 
       - name: Install application dependencies and run local checks
         working-directory: app-under-test

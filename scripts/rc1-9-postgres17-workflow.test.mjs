@@ -23,6 +23,8 @@ test('RC1.9 checkout pins the published app separately from the harness commit',
   assert.match(runner, /git -C "\$APP_DIR" rev-parse HEAD/);
   assert.match(runner, /application-migrations\.sha256/);
   assert.match(runner, /harness-bootstrap\.sha256/);
+  assert.match(runner, /rc1-9-normalize-legacy-migrations\.py/);
+  assert.match(runner, /migration-order-normalization\.txt/);
 });
 
 test('RC1.9 never links or resets a remote project and refuses non-loopback targets', () => {
@@ -41,6 +43,7 @@ test('RC1.9 runs application, M37, M38, and cron tests then stops the temporary 
   assert.match(workflow, /npm run typecheck/);
   assert.match(workflow, /npm test/);
   assert.match(workflow, /npm run build/);
+  assert.match(workflow, /normalize-legacy-migrations\.test\.py/);
   assert.match(workflow, /rc1-9-indicator-m37\.test\.mjs/);
   assert.match(workflow, /RC1_APP_DIR=/);
   assert.match(runner, /m37-functional-tests\.mjs/);

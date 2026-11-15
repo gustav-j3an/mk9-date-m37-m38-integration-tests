@@ -25,6 +25,12 @@ mkdir -p "$STACK_DIR/supabase"
 cp "$APP_DIR/supabase/config.toml" "$STACK_DIR/supabase/config.toml"
 cp -R "$APP_DIR/supabase/migrations" "$STACK_DIR/supabase/migrations"
 
+# The published checkout has date-only legacy migration versions, including four
+# files on 2026-09-30. Normalize only their disposable copies to unique versions;
+# keep SQL bodies unchanged and record every mapping for transparent test results.
+python3 "$GITHUB_WORKSPACE/scripts/rc1-9-normalize-legacy-migrations.py" \
+  "$STACK_DIR/supabase/migrations" > "$STACK_DIR/migration-order-normalization.txt"
+
 # The source repository deliberately disables db reset and seeds. Enable migrations
 # only in this disposable copy; never mutate app-under-test or a linked project.
 python3 - "$STACK_DIR/supabase/config.toml" <<'PY'
@@ -77,6 +83,8 @@ sha256sum "$STACK_DIR/supabase/migrations/20260929000000_rc1_9_test_enable_pg_cr
   sed 's#^.*/##' "$STACK_DIR/application-migrations.sha256" | sed 's/^/  - /'
   echo '- Harness bootstrap SHA-256:'
   cat "$STACK_DIR/harness-bootstrap.sha256" | sed 's/^/  - /'
+  echo '- Test-only legacy migration version normalization:'
+  sed 's/^/  - /' "$STACK_DIR/migration-order-normalization.txt"
 } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
 
 cd "$STACK_DIR"
